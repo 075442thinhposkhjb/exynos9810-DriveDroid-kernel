@@ -45,15 +45,45 @@ jobs:
         tar -xzf Kernel.tar.gz -C kernel
 
 
-    - name: Check kernel tree
+    - name: Find and install defconfig
       run: |
-        echo "=== Kernel files ==="
 
-        ls -la kernel | head
+        echo "=== Searching defconfig ==="
 
-        echo "=== Check defconfig ==="
+        CONFIG=$(find kernel \
+        -type f \
+        -name "exynos9810-crownlteks_defconfig_DriveDroid_stable" \
+        | head -n 1)
 
-        ls -lh kernel/arch/arm64/configs/ | grep crownlteks || true
+
+        if [ -z "$CONFIG" ]; then
+
+          echo "Defconfig not found inside kernel"
+
+          echo "Searching all crown files:"
+          find kernel -iname "*crownlteks*"
+
+          exit 1
+
+        fi
+
+
+        echo "Found:"
+        echo "$CONFIG"
+
+
+        if [ "$CONFIG" != "kernel/arch/arm64/configs/exynos9810-crownlteks_defconfig_DriveDroid_stable" ]; then
+
+          cp "$CONFIG" \
+          kernel/arch/arm64/configs/exynos9810-crownlteks_defconfig_DriveDroid_stable
+
+        fi
+
+
+        echo "=== Check ==="
+
+        ls -lh kernel/arch/arm64/configs/ | grep crownlteks
+
 
 
     - name: Fix sdcardfs
@@ -63,22 +93,29 @@ jobs:
         sed -i '/source "fs\/sdcardfs\/Kconfig"/d' fs/Kconfig || true
 
 
+
     - name: Prepare config
       run: |
+
         cd kernel
 
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
 
-        echo "=== Build defconfig ==="
+
+        echo "=== Make defconfig ==="
+
 
         make O=out \
         exynos9810-crownlteks_defconfig_DriveDroid_stable
 
 
+
     - name: Enable USB Gadget
       run: |
+
         cd kernel
+
 
         scripts/config --file out/.config \
           -e USB_GADGET \
@@ -91,20 +128,25 @@ jobs:
         make O=out olddefconfig
 
 
+
     - name: Build Kernel
       run: |
+
         cd kernel
 
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
 
+
         make O=out -j$(nproc) Image.gz-dtb
+
 
 
     - name: Upload Kernel
       uses: actions/upload-artifact@v4
 
       with:
+
         name: N960N-kernel
 
         path: kernel/out/arch/arm64/boot/Image.gz-dtb
