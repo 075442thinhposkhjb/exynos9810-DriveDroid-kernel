@@ -25,8 +25,9 @@ jobs:
           export SUBARCH=arm64
           export CROSS_COMPILE="${{ github.workspace }}/toolchain/bin/aarch64-linux-android-"
           
-          # Thay tên defconfig của bạn vào đây (ví dụ: exynos9810-crownlteks_defconfig)
-          make exynos9810-crownlteks_defconfig
+          cp arch/arm64/configs/exynos9810-crownlteks_defconfig_DriveDroid_stable arch/arm64/configs/temp_defconfig
+          
+          make temp_defconfig
           make -j$(nproc)
 
       - name: Upload Kernel Artifact
